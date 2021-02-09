@@ -8,6 +8,7 @@ import (
 	experimentTypes "github.com/litmuschaos/litmus-go/pkg/generic/pod-delete/types"
 	"github.com/litmuschaos/litmus-go/pkg/log"
 	"github.com/litmuschaos/litmus-go/pkg/math"
+	"github.com/litmuschaos/litmus-go/pkg/probe"
 	"github.com/litmuschaos/litmus-go/pkg/status"
 	"github.com/litmuschaos/litmus-go/pkg/types"
 	"github.com/litmuschaos/litmus-go/pkg/utils/common"
@@ -30,11 +31,11 @@ func PreparePodDelete(experimentsDetails *experimentTypes.ExperimentDetails, cli
 	}
 
 	if experimentsDetails.Sequence == "serial" {
-		if err = InjectChaosInSerialMode(experimentsDetails, clients, chaosDetails, eventsDetails); err != nil {
+		if err = InjectChaosInSerialMode(experimentsDetails, clients, chaosDetails, eventsDetails, resultDetails); err != nil {
 			return err
 		}
 	} else {
-		if err = InjectChaosInParallelMode(experimentsDetails, clients, chaosDetails, eventsDetails); err != nil {
+		if err = InjectChaosInParallelMode(experimentsDetails, clients, chaosDetails, eventsDetails, resultDetails); err != nil {
 			return err
 		}
 	}
@@ -48,7 +49,7 @@ func PreparePodDelete(experimentsDetails *experimentTypes.ExperimentDetails, cli
 }
 
 // InjectChaosInSerialMode delete the target application pods serial mode(one by one)
-func InjectChaosInSerialMode(experimentsDetails *experimentTypes.ExperimentDetails, clients clients.ClientSets, chaosDetails *types.ChaosDetails, eventsDetails *types.EventDetails) error {
+func InjectChaosInSerialMode(experimentsDetails *experimentTypes.ExperimentDetails, clients clients.ClientSets, chaosDetails *types.ChaosDetails, eventsDetails *types.EventDetails, resultDetails *types.ResultDetails) error {
 
 	GracePeriod := int64(0)
 	//ChaosStartTimeStamp contains the start timestamp, when the chaos injection begin
@@ -89,7 +90,10 @@ func InjectChaosInSerialMode(experimentsDetails *experimentTypes.ExperimentDetai
 			if err != nil {
 				return err
 			}
-
+			// run the probes during chaos
+			if len(resultDetails.ProbeDetails) != 0 {
+				probe.RunProbes(chaosDetails, clients, resultDetails, "DuringChaos", eventsDetails)
+			}
 			//Waiting for the chaos interval after chaos injection
 			if experimentsDetails.ChaosInterval != 0 {
 				log.Infof("[Wait]: Wait for the chaos interval %vs", experimentsDetails.ChaosInterval)
@@ -123,7 +127,7 @@ func InjectChaosInSerialMode(experimentsDetails *experimentTypes.ExperimentDetai
 }
 
 // InjectChaosInParallelMode delete the target application pods in parallel mode (all at once)
-func InjectChaosInParallelMode(experimentsDetails *experimentTypes.ExperimentDetails, clients clients.ClientSets, chaosDetails *types.ChaosDetails, eventsDetails *types.EventDetails) error {
+func InjectChaosInParallelMode(experimentsDetails *experimentTypes.ExperimentDetails, clients clients.ClientSets, chaosDetails *types.ChaosDetails, eventsDetails *types.EventDetails, resultDetails *types.ResultDetails) error {
 
 	GracePeriod := int64(0)
 	//ChaosStartTimeStamp contains the start timestamp, when the chaos injection begin
@@ -165,7 +169,10 @@ func InjectChaosInParallelMode(experimentsDetails *experimentTypes.ExperimentDet
 				return err
 			}
 		}
-
+		// run the probes during chaos
+		if len(resultDetails.ProbeDetails) != 0 {
+			probe.RunProbes(chaosDetails, clients, resultDetails, "DuringChaos", eventsDetails)
+		}
 		//Waiting for the chaos interval after chaos injection
 		if experimentsDetails.ChaosInterval != 0 {
 			log.Infof("[Wait]: Wait for the chaos interval %vs", experimentsDetails.ChaosInterval)
@@ -245,7 +252,10 @@ func PodDeleteChaos(experimentsDetails *experimentTypes.ExperimentDetails, clien
 				return err
 			}
 		}
-
+		// run the probes during chaos
+		if len(resultDetails.ProbeDetails) != 0 {
+			probe.RunProbes(chaosDetails, clients, resultDetails, "DuringChaos", eventsDetails)
+		}
 		//Waiting for the chaos interval after chaos injection
 		if experimentsDetails.ChaosInterval != 0 {
 			log.Infof("[Wait]: Wait for the chaos interval %vs", experimentsDetails.ChaosInterval)
